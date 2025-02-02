@@ -48,13 +48,17 @@ export async function POST(req) {
     });
   }
 
-  // Do something with payload
-  // For this guide, log payload to console
-  const { id } = evt?.data;
+  // Extract data from the event
+  const { id, first_name, last_name, image_url, email_addresses } = evt?.data;
   const eventType = evt?.type;
 
   if (eventType === 'user.created' || eventType === 'user.updated') {
-    const { first_name, last_name, image_url, email_addresses } = evt?.data;
+    // Validate required data before using it
+    if (!id || !first_name || !last_name || !image_url) {
+      console.log('Error: Missing required data');
+      return new Response('Error: Missing required data', { status: 400 });
+    }
+
     try {
       const user = await createOrUpdateUser(
         id,
@@ -63,8 +67,10 @@ export async function POST(req) {
         image_url,
         email_addresses
       );
+
       if (user && eventType === 'user.created') {
         try {
+          // Update Clerk metadata with user MongoDB ID
           await clerkClient.users.updateUserMetadata(id, {
             publicMetadata: {
               userMongoId: user._id,
@@ -72,13 +78,12 @@ export async function POST(req) {
           });
         } catch (error) {
           console.log('Error: Could not update user metadata:', error);
+          return new Response('Error: Could not update user metadata', { status: 500 });
         }
       }
     } catch (error) {
       console.log('Error: Could not create or update user:', error);
-      return new Response('Error: Could not create or update user', {
-        status: 400,
-      });
+      return new Response('Error: Could not create or update user', { status: 500 });
     }
   }
 
@@ -87,9 +92,7 @@ export async function POST(req) {
       await deleteUser(id);
     } catch (error) {
       console.log('Error: Could not delete user:', error);
-      return new Response('Error: Could not delete user', {
-        status: 400,
-      });
+      return new Response('Error: Could not delete user', { status: 400 });
     }
   }
 

@@ -22,17 +22,20 @@ export const createOrUpdateUser = async (
       },
       { upsert: true, new: true }
     );
-    return user;
+
+    // Convert Mongoose document to plain JavaScript object
+    return user ? user.toObject() : null; // Ensure returning a plain object
   } catch (error) {
     console.error('Error: Could not create or update user:', error);
-    throw error; // ✅ Rethrow error so it can be handled properly
+    throw error;
   }
 };
 
 export const deleteUser = async (id) => {
   try {
     await connect();
-    await User.findOneAndDelete({ clerkId: id });
+    const result = await User.findOneAndDelete({ clerkId: id });
+    return result ? result.toObject() : null; // Ensure returning a plain object
   } catch (error) {
     console.error('Error: Could not delete user:', error);
     throw error;
